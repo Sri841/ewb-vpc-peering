@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EWB VPC Peering - Live Demo</title>
+<style>
+:root{--navy:#0a1330;--blue:#00a3ff;--lime:#a8ff00;--cream:#f5f0e8;--red:#ff5a5a}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--cream);color:var(--navy)}
+header{background:var(--navy);color:#fff;padding:26px 24px}
+header h1{margin:0 0 6px;font-weight:500}header h1 span{color:var(--blue)}
+header p{margin:0;color:#b9c3e0}
+.sim{display:inline-block;margin-top:10px;background:var(--lime);color:var(--navy);padding:3px 10px;border-radius:99px;font-size:.78rem;font-weight:600}
+main{max-width:1050px;margin:0 auto;padding:22px;display:grid;gap:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card,.panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(10,19,48,.12)}
+h2{margin:0 0 10px;font-size:1.05rem}small{font-weight:400;color:#667}
+pre{background:var(--navy);color:#d6e4ff;padding:12px;border-radius:8px;overflow:auto;font-size:.8rem;margin:0;min-height:3em;white-space:pre-wrap}
+.badge{padding:2px 8px;border-radius:99px;font-size:.75rem;background:#ddd;color:var(--navy)}
+.badge.ok{background:var(--lime)}.badge.bad{background:var(--red);color:#fff}
+label.sw{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;cursor:pointer;font-size:.92rem}
+label.sw input{width:18px;height:18px}
+label.sw em{display:block;font-style:normal;font-size:.75rem;color:#667}
+button{background:var(--blue);color:#fff;border:0;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:.88rem;margin:2px 4px 2px 0}
+button.ghost{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+form{display:flex;gap:8px;margin:10px 0}form input{flex:1;padding:9px;border:1px solid #bbc;border-radius:8px}
+form input#author{flex:0 0 140px}
+ul{list-style:none;padding:0;margin:0}li{padding:9px 0;border-bottom:1px solid #eee}
+.meta{font-size:.75rem;color:#667}.error{color:var(--red);font-weight:600}
+svg{width:100%;height:auto}
+footer{text-align:center;color:#667;padding:20px;font-size:.8rem}
+a{color:#0070c0}
+</style>
+</head>
+<body>
+<header>
+  <h1>EWB <span>VPC Peering</span> - Live Demo</h1>
+  <p>Browser &rarr; App-A (VPC A, 10.10.2.10) &rarr; <b>peering</b> &rarr; App-B (VPC B, 10.20.1.10)</p>
+  <span class="sim">SIMULATION - runs in your browser, no AWS needed</span>
+</header>
+<main>
+  <section class="panel">
+    <h2>Network diagram <small>green = traffic can flow</small></h2>
+    <svg viewBox="0 0 720 190" role="img" aria-label="Network diagram">
+      <rect x="10" y="10" width="300" height="170" rx="12" fill="#e9f5fc" stroke="#9ccbe6"/>
+      <text x="24" y="34" font-size="15" fill="#0a1330">VPC A  10.10.0.0/16</text>
+      <rect x="28" y="50" width="120" height="50" rx="8" fill="#fff" stroke="#9ccbe6"/><text x="38" y="72" font-size="12" fill="#0a1330">Bastion</text><text x="38" y="90" font-size="11" fill="#667">10.10.1.10 (public)</text>
+      <rect x="170" y="110" width="125" height="55" rx="8" fill="#fff" stroke="#9ccbe6"/><text x="180" y="132" font-size="12" fill="#0a1330">App-A</text><text x="180" y="150" font-size="11" fill="#667">10.10.2.10 (private)</text>
+      <rect x="410" y="10" width="300" height="170" rx="12" fill="#f3f8ec" stroke="#b9d08a"/>
+      <text x="424" y="34" font-size="15" fill="#0a1330">VPC B  10.20.0.0/16</text>
+      <rect x="440" y="110" width="125" height="55" rx="8" fill="#fff" stroke="#b9d08a"/><text x="450" y="132" font-size="12" fill="#0a1330">App-B</text><text x="450" y="150" font-size="11" fill="#667">10.20.1.10 (private)</text>
+      <line id="l-app" x1="295" y1="137" x2="440" y2="137" stroke="#ccc" stroke-width="5"/>
+      <text x="335" y="128" font-size="11" fill="#0a1330">peering (pcx)</text>
+      <line id="l-ssh" x1="148" y1="75" x2="505" y2="75" stroke="#ccc" stroke-width="3" stroke-dasharray="6 4"/>
+      <text x="260" y="68" font-size="11" fill="#0a1330">SSH via bastion (ProxyJump)</text>
+      <line x1="90" y1="100" x2="190" y2="125" stroke="#0a1330" stroke-width="2"/>
+    </svg>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Lab settings <small>toggle like the AWS console</small></h2>
+      <label class="sw"><input type="checkbox" id="peering"><span>Peering connection ewb-a-b-peer Active<em>Request + accept</em></span></label>
+      <label class="sw"><input type="checkbox" id="rA"><span>Route 10.20.0.0/16 &rarr; pcx in ewb-rt-a-private<em>Forward path</em></span></label>
+      <label class="sw"><input type="checkbox" id="rB"><span>Route 10.10.0.0/16 &rarr; pcx in ewb-rt-b-private<em>Return path</em></span></label>
+      <label class="sw"><input type="checkbox" id="rP"><span>Route 10.20.0.0/16 &rarr; pcx in ewb-rt-a-public<em>Needed for bastion ProxyJump to App-B</em></span></label>
+      <label class="sw"><input type="checkbox" id="icmp"><span>ewb-sg-app-b: ICMP echo from 10.10.2.10/32<em>Controlled-failure rule</em></span></label>
+      <label class="sw"><input type="checkbox" id="tcp"><span>ewb-sg-app-b: TCP 9000 from 10.10.2.10/32<em>App data service (extra rule)</em></span></label>
+      <div style="margin-top:10px">
+        <button class="ghost" data-preset="baseline">Baseline (before peering)</button>
+        <button class="ghost" data-preset="full">Fully configured</button>
+        <button class="ghost" data-preset="noreturn">Missing return route</button>
+        <button class="ghost" data-preset="noicmp">ICMP rule removed</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Workbook tests</h2>
+      <button id="t-fwd">02 Ping App-A &rarr; App-B</button>
+      <button id="t-rev">03 Ping App-B &rarr; App-A</button>
+      <button id="t-ssh">04 SSH to App-B</button>
+      <pre id="term">Choose "Baseline", run a test, then switch to "Fully configured" and run it again.</pre>
+    </section>
+  </div>
+
+  <section class="grid">
+    <article class="card"><h2>Peering link <small id="badge" class="badge">-</small></h2><pre id="link">-</pre></article>
+    <article class="card"><h2>App-B data service</h2><pre id="appb">-</pre></article>
+  </section>
+
+  <section class="panel">
+    <h2>Notes board <small>written via App-A, stored on App-B</small></h2>
+    <form id="nf"><input id="author" placeholder="Your name" maxlength="40"><input id="text" placeholder="Write a note..." maxlength="280" required><button type="submit">Post</button></form>
+    <p id="nerr" class="error" hidden></p>
+    <ul id="notes"></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Why it behaves this way</h2>
+    <ul>
+      <li><b>Active peering is not enough.</b> Packets need routes on both sides, and security groups must allow them.</li>
+      <li><b>Return route:</b> without 10.10.0.0/16 &rarr; pcx in VPC B, replies are dropped.</li>
+      <li><b>ProxyJump:</b> the bastion opens the connection to App-B, so the <i>public</i> subnet needs the peering route too.</li>
+      <li><b>Security groups vs routes:</b> removing the ICMP rule stops ping but the dashboard (TCP 9000) keeps working.</li>
+    </ul>
+    <p>Source code and Terraform: <a href="https://github.com/Sri841/ewb-vpc-peering">github.com/Sri841/ewb-vpc-peering</a></p>
+  </section>
+</main>
+<footer>LEARN. ELEVATE. EMPOWER. &middot; EWB Cloud Labs - Project 01</footer>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const KEYS = ["peering", "rA", "rB", "rP", "icmp", "tcp"];
+const PRESETS = {
+  baseline: { peering: 0, rA: 0, rB: 0, rP: 0, icmp: 1, tcp: 1 },
+  full:     { peering: 1, rA: 1, rB: 1, rP: 1, icmp: 1, tcp: 1 },
+  noreturn: { peering: 1, rA: 1, rB: 0, rP: 1, icmp: 1, tcp: 1 },
+  noicmp:   { peering: 1, rA: 1, rB: 1, rP: 1, icmp: 0, tcp: 1 }
+};
+const S = () => Object.fromEntries(KEYS.map((k) => [k, $(k).checked]));
+const pingOk = (s) => s.peering && s.rA && s.rB && s.icmp;
+const appOk  = (s) => s.peering && s.rA && s.rB && s.tcp;
+const sshOk  = (s) => s.peering && s.rP && s.rB;
+
+let notes = [];
+try { notes = JSON.parse(localStorage.getItem("ewb-notes") || "[]"); } catch (e) { notes = []; }
+const saveNotes = () => { try { localStorage.setItem("ewb-notes", JSON.stringify(notes.slice(-50))); } catch (e) {} };
+
+function why(s) {
+  if (!s.peering) return "No peering connection exists.";
+  if (!s.rA) return "No route to 10.20.0.0/16 in ewb-rt-a-private.";
+  if (!s.rB) return "Replies cannot return: missing 10.10.0.0/16 route in ewb-rt-b-private.";
+  return null;
+}
+
+function render() {
+  const s = S(), up = appOk(s);
+  $("badge").textContent = up ? "UP" : "DOWN";
+  $("badge").className = "badge " + (up ? "ok" : "bad");
+  $("link").textContent = up
+    ? JSON.stringify({ reachable: true, latency_ms: 1.4, note: "App-B saw the request from 10.10.2.10" }, null, 2)
+    : JSON.stringify({ reachable: false, error: why(s) || "Blocked by ewb-sg-app-b: TCP 9000 from 10.10.2.10/32 missing." }, null, 2);
+  $("appb").textContent = up
+    ? JSON.stringify({ service: "app-b", vpc: "ewb-vpc-b", private_ips: ["10.20.1.10"], seen_client_ip: "10.10.2.10" }, null, 2)
+    : "App-B not reachable over peering.";
+  $("l-app").setAttribute("stroke", up ? "#5cc200" : "#ccc");
+  $("l-ssh").setAttribute("stroke", sshOk(s) ? "#00a3ff" : "#ccc");
+  renderNotes(up);
+}
+
+function renderNotes(up) {
+  const ul = $("notes"); ul.replaceChildren();
+  $("nerr").hidden = up;
+  if (!up) { $("nerr").textContent = "Cannot reach App-B - notes unavailable. Fix the routes/rules above."; return; }
+  if (!notes.length) { const li = document.createElement("li"); li.textContent = "No notes yet."; ul.append(li); return; }
+  [...notes].reverse().forEach((n) => {
+    const li = document.createElement("li");
+    const t = document.createElement("div"); t.textContent = n.text;
+    const m = document.createElement("div"); m.className = "meta"; m.textContent = `${n.author} · ${n.ts} · stored by App-B (request from 10.10.2.10)`;
+    li.append(t, m); ul.append(li);
+  });
+}
+
+function pingText(src, dst, ok, s, reason) {
+  const lines = [`$ ssh ${src.host}`, `$ ping -c 4 ${dst}`, `PING ${dst} (${dst}) 56(84) bytes of data.`];
+  if (ok) {
+    for (let i = 1; i <= 4; i++) lines.push(`64 bytes from ${dst}: icmp_seq=${i} ttl=127 time=${(1.2 + i * 0.07).toFixed(2)} ms`);
+    lines.push(`--- ${dst} ping statistics ---`, "4 packets transmitted, 4 received, 0% packet loss");
+  } else {
+    lines.push(`--- ${dst} ping statistics ---`, "4 packets transmitted, 0 received, 100% packet loss", "", "Why: " + reason);
+  }
+  return lines.join("\n");
+}
+
+$("t-fwd").onclick = () => {
+  const s = S(), ok = pingOk(s);
+  $("term").textContent = pingText({ host: "ewb-app-a" }, "10.20.1.10", ok, s, why(s) || "ewb-sg-app-b has no ICMP echo rule from 10.10.2.10/32.");
+};
+$("t-rev").onclick = () => {
+  const s = S(), ok = s.peering && s.rA && s.rB && s.icmpA !== false;
+  $("term").textContent = pingText({ host: "ewb-app-b" }, "10.10.2.10", ok, s, why(s) || "blocked");
+};
+$("t-ssh").onclick = () => {
+  const s = S();
+  $("term").textContent = sshOk(s)
+    ? "$ ssh ewb-app-b\nConnected via bastion (ProxyJump).\n[ec2-user@ip-10-20-1-10 ~]$"
+    : "$ ssh ewb-app-b\nssh: connect to host 10.20.1.10 port 22: Operation timed out\n\nWhy: " +
+      (!s.peering ? "no peering connection." : !s.rP ? "ewb-rt-a-public lacks 10.20.0.0/16 -> pcx (bastion cannot reach VPC B)." : "return route missing in ewb-rt-b-private.");
+};
+
+document.querySelectorAll("[data-preset]").forEach((b) => (b.onclick = () => {
+  const p = PRESETS[b.dataset.preset];
+  KEYS.forEach((k) => ($(k).checked = !!p[k]));
+  $("term").textContent = "Preset applied: " + b.textContent.trim();
+  render();
+}));
+KEYS.forEach((k) => ($(k).onchange = render));
+
+$("nf").onsubmit = (e) => {
+  e.preventDefault();
+  if (!appOk(S())) { render(); return; }
+  notes.push({ author: $("author").value.trim() || "anonymous", text: $("text").value.trim().slice(0, 280), ts: new Date().toISOString().slice(0, 19).replace("T", " ") });
+  saveNotes(); $("text").value = ""; render();
+};
+
+KEYS.forEach((k) => ($(k).checked = !!PRESETS.full[k]));
+render();
+</script>
+</body>
+</html>
