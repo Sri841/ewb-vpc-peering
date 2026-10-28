@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Run app locally", "type": "shell", "command": "bash scripts/run-local.sh", "problemMatcher": [] },
+    { "label": "Terraform: init", "type": "shell", "command": "terraform -chdir=terraform init", "problemMatcher": [] },
+    { "label": "Terraform: apply (baseline, no peering)", "type": "shell", "command": "terraform -chdir=terraform apply -var enable_peering=false", "problemMatcher": [] },
+    { "label": "Terraform: apply (peering on)", "type": "shell", "command": "terraform -chdir=terraform apply", "problemMatcher": [] },
+    { "label": "Deploy app to EC2", "type": "shell", "command": "bash scripts/deploy.sh", "problemMatcher": [] },
+    { "label": "Open tunnel to dashboard", "type": "shell", "command": "bash scripts/tunnel.sh", "problemMatcher": [] },
+    { "label": "Run workbook tests", "type": "shell", "command": "bash scripts/tests.sh", "problemMatcher": [] },
+    { "label": "Terraform: destroy (cleanup)", "type": "shell", "command": "terraform -chdir=terraform destroy", "problemMatcher": [] }
+  ]
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EWB VPC Peering Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>EWB <span>VPC Peering</span> Dashboard</h1>
+    <p>Browser &rarr; App-A (VPC A, 10.10.2.10) &rarr; <b>peering</b> &rarr; App-B (VPC B, 10.20.1.10)</p>
+  </header>
+
+  <main>
+    <section class="cards">
+      <article class="card" id="card-a"><h2>App-A <small>VPC A</small></h2><pre>loading…</pre></article>
+      <article class="card" id="card-link"><h2>Peering link <small id="link-badge" class="badge">checking</small></h2><pre id="link-body">loading…</pre></article>
+      <article class="card" id="card-b"><h2>App-B <small>VPC B</small></h2><pre>loading…</pre></article>
+    </section>
+
+    <section class="panel">
+      <h2>Connectivity test</h2>
+      <p>Runs <code>ping -c 4 10.20.1.10</code> from App-A (needs routes on both sides + ICMP rule on App-B).</p>
+      <button id="btn-ping">Run ping from App-A</button> <button id="btn-refresh" class="ghost">Refresh status</button>
+      <pre id="ping-out">no test run yet</pre>
+    </section>
+
+    <section class="panel">
+      <h2>Notes board <small>stored on App-B, written through App-A</small></h2>
+      <form id="note-form">
+        <input id="author" placeholder="Your name" maxlength="40">
+        <input id="text" placeholder="Write a note…" maxlength="280" required>
+        <button type="submit">Post</button>
+      </form>
+      <p id="note-error" class="error" hidden></p>
+      <ul id="notes"></ul>
+    </section>
+  </main>
+  <footer>LEARN. ELEVATE. EMPOWER. &middot; Break the peering route or ICMP/TCP 9000 rule and watch this page fail.</footer>
+  <script src="app.js"></script>
+</body>
+</html>

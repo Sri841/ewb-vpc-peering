@@ -1,0 +1,9 @@
+.keys/
+ssh_config
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.pem
+__pycache__/
+.local-data/
